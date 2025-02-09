@@ -87,6 +87,7 @@ You might need to **change this docker image**. Many pre-built images (which alr
 > COPY requirements.txt /job/ 
 > RUN pip install -r requirements.txt
 > ```
+> **Remember to add** `cp requirements.txt submit/requirements.txt` **in submit.sh if you are using this file.**
 
 You must submit the project to Canvas as a zip file (named without whitespace). 
 * Follow the format: **Project447GroupN.zip** where N is your Group no.
