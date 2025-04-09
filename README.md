@@ -1,6 +1,6 @@
-# CSE447-project
+# CSE517P-project
 
-This repo contains an example submission for the CSE447 project.
+This repo contains an example submission for the CSE517P project.
 For this project, you will develop a program that takes in a string of character and tries to predict the next character.
 For illustration purposes, this repo contains a dummy program that simply generates 3 random guesses of the next character.
 
@@ -90,7 +90,7 @@ You might need to **change this docker image**. Many pre-built images (which alr
 > **Remember to add** `cp requirements.txt submit/requirements.txt` **in submit.sh if you are using this file.**
 
 You must submit the project to Canvas as a zip file (named without whitespace). 
-* Follow the format: **Project447GroupN.zip** where N is your Group no.
+* Follow the format: **Project517GroupN.zip** where N is your Group no.
 * It should contain the following:
 
 ```
@@ -145,10 +145,10 @@ You should be able to emulate the grading using the example data by running `bas
 
 ## Questions
 As more questions come in, we will create a FAQ here.
-In the mean time, please post your questions to edStem with the tag `Projects (447)`.
+In the mean time, please post your questions to edStem with the tag `Projects (517)`.
 
-Can we have 2 or 4 instead of 3 members?
-> We strongly prefer that you have 3 members. If you would really like to have a group of 4, please instead do two groups of 2.
+Can we have 4 or more members?
+> We require that you have 2 or 3 members. If you would really like to have a group of 4, please instead do two groups of 2.
 
 Will we get help in selecting datasets? Could we also get tips on finding good corpora?
 > Not at this time. Choosing and preprocessing your data is a key component of practising NLP in the real world and we would like you to experience it first hand.
