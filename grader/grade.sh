@@ -6,7 +6,7 @@ DATA=$1
 OUT=${2:-output}
 mkdir -p $OUT
 
-docker build -t cse447-proj/demo -f Dockerfile .
+docker build -t cse517-proj/demo -f Dockerfile .
 
 function run() {
   docker run --rm \
@@ -14,7 +14,7 @@ function run() {
     -v $PWD/work:/job/work \
     -v $DATA:/job/data \
     -v $PWD/$OUT:/job/output \
-    cse447-proj/demo \
+    cse517-proj/demo \
     bash /job/src/predict.sh /job/data/input.txt /job/output/pred.txt
 }
 
