@@ -3,6 +3,7 @@ import os
 import string
 import random
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from datasets import load_dataset
 
 
 class MyModel:
@@ -70,6 +71,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     random.seed(0)
+
+    # Load the entire CSV file
+    dataset = load_dataset("csv", data_files="src/data/mldd_dataset.csv")
+    train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.1).values()
 
     if args.mode == 'train':
         if not os.path.isdir(args.work_dir):
