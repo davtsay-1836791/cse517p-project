@@ -3,6 +3,7 @@ import os
 import string
 import random
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+import time
 from datasets import load_dataset
 import re
 import unicodedata
@@ -115,6 +116,26 @@ class MyModel:
             })
         return normalized
 
+    def evaluate(self, predictions, answers):
+        # print("Predictions")
+        # print(predictions)
+        # print("Answers")
+        # print(answers)
+
+        # create a dictionary of metircs
+        metrics = {
+            'accuracy': None,
+            'precision': None,
+            'recall': None,
+            'f1': None,
+        }
+
+        correct = sum(a in p for p, a in zip(predictions, answers))
+        accuracy = correct / len(answers) if answers else 0
+
+        metrics['accuracy'] = accuracy
+        return metrics
+
 
 if __name__ == '__main__':
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
@@ -163,10 +184,25 @@ if __name__ == '__main__':
         model = MyModel.load(args.work_dir)
         print('Loading test data from {}'.format(args.test_data))
         test_data = model.load_dev_data(normalized_dev_data, args.test_data)  # Test with normalized dev data
+        
         print('Making predictions')
+        start_time = time.time()
         pred = model.run_pred(test_data)
+        end_time = time.time()
+        print('Prediction step took {:.10f} seconds'.format(end_time - start_time))
         print('Writing predictions to {}'.format(args.test_output))
+        
         assert len(pred) == len(test_data), 'Expected {} predictions but got {}'.format(len(test_data), len(pred))
         model.write_pred(pred, args.test_output)
+
+        answer_file = 'example/answer.txt'
+        if os.path.exists(answer_file):
+            print('Loading answer data from {}'.format(answer_file))
+            answers = MyModel.load_test_data(answer_file)
+            print('Evaluating predictions')
+            metrics = model.evaluate(pred, answers)
+            print('Accuracy: {:.4f}'.format(metrics['accuracy']))
+        else:
+            print('Answer file not found.')
     else:
         raise NotImplementedError('Unknown mode {}'.format(args.mode))
