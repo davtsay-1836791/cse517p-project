@@ -11,8 +11,6 @@ from nltk.corpus import stopwords
 import subprocess
 import torch
 import torch.nn as nn
-import chardet
-
 
 # Ensure necessary NLTK data files are downloaded
 nltk.download('punkt')
@@ -147,12 +145,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     random.seed(0)
-
-    with open('output/mldd_dataset.csv', 'rb') as f:
-        rawdata = f.read(100000)  # read first 100 KB
-        result = chardet.detect(rawdata)
-
-    print(f"Detected encoding: {result['encoding']} (confidence: {result['confidence']})")
 
     # Check if the mldd_dataset.csv file exists
     dataset_file = 'output/mldd_dataset.csv'
