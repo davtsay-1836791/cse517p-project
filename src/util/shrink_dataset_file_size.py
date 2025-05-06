@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 # Input file
-input_file = 'src/data/mldd_dataset.csv'
+input_file = 'src/dataset/mldd_dataset.csv'
 
 # Number of target splits
 num_splits = 6
@@ -34,6 +34,6 @@ for idx, size in row_sizes.items():
 # Write out splits
 for i, indices in enumerate(splits):
     split_df = df.loc[indices]
-    output_file = f'src/data/mldd_split_dataset_{i + 1}.csv'
+    output_file = f'src/dataset/mldd_split_dataset_{i + 1}.csv'
     split_df.to_csv(output_file, index=False)
     print(f"Wrote {output_file}: {split_sizes[i]/(1024*1024):.2f} MB, {len(indices)} rows")
