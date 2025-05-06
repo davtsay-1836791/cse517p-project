@@ -11,6 +11,8 @@ from nltk.corpus import stopwords
 import subprocess
 import torch
 import torch.nn as nn
+import chardet
+
 
 # Ensure necessary NLTK data files are downloaded
 nltk.download('punkt')
@@ -116,18 +118,19 @@ class MyModel(nn.Module):
         """
         normalized = []
 
-        # Regex to capture everything inside 'value':'...'
-        value_pattern = re.compile(r"'value'\s*:\s*'(.*?)'", re.DOTALL)
+        # Improved regex: handles escaped quotes inside the value
+        value_pattern = re.compile(r"'value'\s*:\s*'((?:[^'\\]|\\.)*)'", re.DOTALL)
 
         if not isinstance(conversation_str_list, list):
             print(f"Expected a list, but got: {type(conversation_str_list)}")
             return normalized
 
         for conversation_str in conversation_str_list:
-            # Find all 'value' matches using the regex pattern
             matches = value_pattern.findall(conversation_str)
             for text in matches:
-                # Normalize the text
+                # Unescape any escaped quotes
+                text = text.encode('utf-8').decode('unicode_escape')
+
                 normalized_words = MyModel.normalize_value(text)
                 normalized.append({
                     "normalized": normalized_words
@@ -144,6 +147,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     random.seed(0)
+
+    with open('output/mldd_dataset.csv', 'rb') as f:
+        rawdata = f.read(100000)  # read first 100 KB
+        result = chardet.detect(rawdata)
+
+    print(f"Detected encoding: {result['encoding']} (confidence: {result['confidence']})")
 
     # Check if the mldd_dataset.csv file exists
     dataset_file = 'output/mldd_dataset.csv'
