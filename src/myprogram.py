@@ -125,9 +125,6 @@ class MyModel:
         # create a dictionary of metircs
         metrics = {
             'accuracy': None,
-            'precision': None,
-            'recall': None,
-            'f1': None,
         }
 
         correct = sum(a in p for p, a in zip(predictions, answers))
