@@ -6,12 +6,8 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from datasets import load_dataset
 import re
 import unicodedata
-from langdetect import detect
-import ast
 import nltk
-from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-from nltk.tokenize import RegexpTokenizer
 import subprocess
 import torch
 import torch.nn as nn
@@ -36,7 +32,7 @@ class MyModel(nn.Module):
         except Exception as e:
             print(f"Error parsing conversations field: {e}")
             raise
-        normalized_train_data = cls.normalize_conversations(train_conversations)
+        normalized_train_data = cls.extract_and_normalize(train_conversations)
         return normalized_train_data
 
     @classmethod
@@ -49,7 +45,7 @@ class MyModel(nn.Module):
         except Exception as e:
             print(f"Error parsing conversations field: {e}")
             raise
-        normalized_dev_data = cls.normalize_conversations(dev_conversations)
+        normalized_dev_data = cls.extract_and_normalize(dev_conversations)
         return normalized_dev_data
 
     @classmethod
@@ -76,8 +72,8 @@ class MyModel(nn.Module):
         """
         Save the model's state dict to the specified directory.
         """
-        model_path = os.path.join(work_dir, 'model.pt')  # Save as a .pth file (PyTorch format)
-        torch.save(self.state_dict(), model_path)  # Save only the model's state_dict
+        model_path = os.path.join(work_dir, 'model.pt')
+        torch.save(self.state_dict(), model_path)
         print(f"Model saved to {model_path}")
 
     @classmethod
@@ -92,57 +88,50 @@ class MyModel(nn.Module):
     @staticmethod
     def normalize_value(text):
         """
-        Normalizes a given text by removing unwanted characters, splitting into words,
-        and preserving all Unicode characters (including non-Latin).
+        Normalize a given text by cleaning, tokenizing, and removing stopwords.
         """
-        # Remove leading/trailing spaces
-        text = text.strip()
+        # Remove newline characters
+        text = text.strip().replace('\n', ' ')
 
-        # Remove escaped newlines (\\n) completely
-        text = text.replace('\\n', '')
+        # Normalize Unicode characters
+        text = unicodedata.normalize('NFKC', text)
 
-        # Remove actual newlines (\n) completely
-        text = text.replace('\n', '')
+        # Remove non-word characters
+        text = re.sub(r'[^\w\s]', '', text, flags=re.UNICODE)
 
-        # Use a regex pattern to keep only letters (including Unicode letters) and spaces
-        text = re.sub(r'[^A-Za-z\u00C0-\u024F\u1E00-\u1EFF\u4e00-\u9fff\uac00-\ud7af\s]+', '', text)
+        # Tokenize into words
+        words = re.findall(r'\w+', text, flags=re.UNICODE)
 
-        # Tokenize the text into words using RegexpTokenizer (no need for punkt)
-        tokenizer = RegexpTokenizer(r'\w+')
-        words = tokenizer.tokenize(text)
-
-        # Remove stopwords using NLTK's stopwords list TODO: more languages
+        # Get english stopwords (TODO: more langs)
         stop_words = set(stopwords.words('english'))
-        words = [word for word in words if word.lower() not in stop_words]
-
-        return words
+        
+        # Remove stopwords
+        filtered = [word for word in words if word.lower() not in stop_words]
+        return filtered
 
     @staticmethod
-    def normalize_conversations(conversation):
+    def extract_and_normalize(conversation_str_list):
         """
-        Normalize a list of conversation entries. Each entry's value is tokenized into words.
+        Extract 'value' texts using regex and normalize them.
         """
         normalized = []
-        # Ensure that conversation is a list of dictionaries, if not, parse it
-        if isinstance(conversation, str):
-            try:
-                conversation = ast.literal_eval(conversation)  # Parse the string into a list of dictionaries
-            except ValueError as e:
-                print("Error parsing conversation string:", e)
-                return []
 
-        for entry in conversation:
-            if isinstance(entry, dict):  # If entry is a dictionary
-                text = entry.get("value", "")  # Extract the 'value' field
-            elif isinstance(entry, str):  # If entry is a string
-                text = entry  # Use the string directly
-            else:
-                print("Error parsing conversation entry")
-                return
-            normalized_words = MyModel.normalize_value(text)
-            normalized.append({
-                "normalized": normalized_words  # List of words
-            })
+        # Regex to capture everything inside 'value':'...'
+        value_pattern = re.compile(r"'value'\s*:\s*'(.*?)'", re.DOTALL)
+
+        if not isinstance(conversation_str_list, list):
+            print(f"Expected a list, but got: {type(conversation_str_list)}")
+            return normalized
+
+        for conversation_str in conversation_str_list:
+            # Find all 'value' matches using the regex pattern
+            matches = value_pattern.findall(conversation_str)
+            for text in matches:
+                # Normalize the text
+                normalized_words = MyModel.normalize_value(text)
+                normalized.append({
+                    "normalized": normalized_words
+                })
         return normalized
 
 
