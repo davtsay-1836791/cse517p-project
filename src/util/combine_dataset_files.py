@@ -5,7 +5,7 @@ import glob
 output_file = 'output/mldd_dataset.csv'
 
 # Find all split files in order
-split_files = sorted(glob.glob('src/dataset/mldd_split_dataset_*.csv'))
+split_files = sorted(glob.glob('datasets/mldd_split_dataset_*.csv'))
 
 print(f"Files to combine: {split_files}")
 
