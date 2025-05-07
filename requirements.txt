@@ -1,0 +1,4 @@
+datasets==3.5.1
+nltk==3.9.1
+pandas==2.2.3
+sympy==1.14.0
