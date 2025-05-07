@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import os
-import string
 import random
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from datasets import load_dataset
@@ -16,6 +15,11 @@ import torch.nn as nn
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
+from ngram_model import NGramModel
+
+# Set UTF-8 encoding for standard output
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 class MyModel(nn.Module):
     """
@@ -162,28 +166,47 @@ if __name__ == '__main__':
     # Split the dataset into train and validation sets (90% train, 10% validation)
     train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.1).values()
 
+    # print part of the train dataset
+    print("Train dataset sample:")
 
     if args.mode == 'train':
         if not os.path.isdir(args.work_dir):
             print('Making working directory {}'.format(args.work_dir))
             os.makedirs(args.work_dir)
         print('Instantiating model')
-        model = MyModel()
+        model = NGramModel()
         print('Normalizing training data...')
-        normalized_train_data = MyModel.load_training_data(train_dataset)  # Normalize training data
+        normalized_train_data = NGramModel.load_training_data(train_dataset)  # Corrected method call
+        
         print('Training')
         model.run_train(normalized_train_data, args.work_dir)  # Train with normalized train data
         print('Saving model')
         model.save(args.work_dir)
     elif args.mode == 'test':
+        # print('Loading model')
+        # model = NGramModel.load(args.work_dir)
+        
+        ### THE PRED STEP normalizes the data as context already
+        # print('Normalizing test data...')
+        # normalized_dev_data = NGramModel.load_dev_data(dev_dataset)  # Normalize dev data
+        
+        # print('Making predictions')
+        # pred = model.run_pred(normalized_dev_data)
+        # print('Writing predictions to {}'.format(args.test_output))
+        # assert len(pred) == len(normalized_dev_data), 'Expected {} predictions but got {}'.format(len(normalized_dev_data), len(pred))
+        # model.write_pred(pred, args.test_output)
+        
+        
+        # use with plain example/input.txt file
+        # python src/myprogram.py test --work_dir work --test_data example/input.txt --test_output pred.txt
         print('Loading model')
-        model = MyModel.load(args.work_dir)
-        print('Normalizing test data...')
-        normalized_dev_data = MyModel.load_dev_data(dev_dataset)  # Normalize dev data
+        model = NGramModel.load(args.work_dir)
+        print('Loading test data from {}'.format(args.test_data))
+        test_data = NGramModel.load_test_data(args.test_data)
         print('Making predictions')
-        pred = model.run_pred(normalized_dev_data)
+        pred = model.run_pred(test_data)
         print('Writing predictions to {}'.format(args.test_output))
-        assert len(pred) == len(normalized_dev_data), 'Expected {} predictions but got {}'.format(len(test_data), len(pred))
+        assert len(pred) == len(test_data), 'Expected {} predictions but got {}'.format(len(test_data), len(pred))
         model.write_pred(pred, args.test_output)
     else:
         raise NotImplementedError('Unknown mode {}'.format(args.mode))
