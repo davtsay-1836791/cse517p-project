@@ -39,8 +39,8 @@ if __name__ == '__main__':
     dataset_file = 'output/mldd_dataset.csv'
     if not os.path.isfile(dataset_file):
         print(f"{dataset_file} not found. Running the necessary script to generate it.")
-        # Run the script from src/util/combine_dataset_files.py to combine the dataset splits
-        script_path = 'src/util/combine_dataset_files.py'
+        # Run the script from src/utils/combine_dataset_files.py to combine the dataset splits
+        script_path = 'src/utils/combine_dataset_files.py'
         subprocess.run(['python', script_path], check=True)
     else:
         print(f"{dataset_file} found. Proceeding with loading the dataset.")
