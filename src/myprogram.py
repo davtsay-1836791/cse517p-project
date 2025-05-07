@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import os
-import string
 import random
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from datasets import load_dataset
@@ -20,58 +19,17 @@ import torch.nn as nn
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
+from ngram_model import NGramModel
+
+# Set UTF-8 encoding for standard output
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 class MyModel(nn.Module):
     """
     This is a starter model to get you started. Feel free to modify this file.
     """
-
-    @classmethod
-    def load_training_data(cls, train_dataset):
-        """
-        Normalizes and loads training data, splits each conversation into individual words.
-        """
-        try:
-            train_conversations = train_dataset['conversations']
-        except Exception as e:
-            print(f"Error parsing conversations field: {e}")
-            raise
-        normalized_train_data = cls.normalize_conversations(train_conversations)
-        return normalized_train_data
-
-    @classmethod
-    def load_dev_data(cls, dev_dataset):
-        """
-        Normalizes and loads dev data, splits each conversation into individual words.
-        """
-        try:
-            dev_conversations = dev_dataset['conversations']
-        except Exception as e:
-            print(f"Error parsing conversations field: {e}")
-            raise
-        normalized_dev_data = cls.normalize_conversations(dev_conversations)
-        return normalized_dev_data
-
-    @classmethod
-    def write_pred(cls, preds, fname):
-        with open(fname, 'wt') as f:
-            for p in preds:
-                f.write('{}\n'.format(p))
-
-    def run_train(self, data, work_dir):
-        # your code here
-        pass
-
-    def run_pred(self, data):
-        # your code here
-        preds = []
-        all_chars = string.ascii_letters
-        for inp in data:
-            # this model just predicts a random character each time
-            top_guesses = [random.choice(all_chars) for _ in range(3)]
-            preds.append(''.join(top_guesses))
-        return preds
-
+    
     def save(self, work_dir):
         """
         Save the model's state dict to the specified directory.
@@ -170,30 +128,48 @@ if __name__ == '__main__':
     dataset = load_dataset("csv", data_files="output/mldd_dataset.csv")
 
     # Split the dataset into train and validation sets (90% train, 10% validation)
-    train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.1).values()
-
+    train_dataset, dev_dataset = dataset["train"].train_test_split(5=0.1).values()
+    # print part of the train dataset
+    print("Train dataset sample:")
 
     if args.mode == 'train':
         if not os.path.isdir(args.work_dir):
             print('Making working directory {}'.format(args.work_dir))
             os.makedirs(args.work_dir)
         print('Instantiating model')
-        model = MyModel()
+        model = NGramModel()
         print('Normalizing training data...')
-        normalized_train_data = MyModel.load_training_data(train_dataset)  # Normalize training data
+        normalized_train_data = NGramModel.load_training_data(train_dataset)  # Corrected method call
+        
         print('Training')
         model.run_train(normalized_train_data, args.work_dir)  # Train with normalized train data
         print('Saving model')
         model.save(args.work_dir)
     elif args.mode == 'test':
+        # print('Loading model')
+        # model = NGramModel.load(args.work_dir)
+        
+        ### THE PRED STEP normalizes the data as context already
+        # print('Normalizing test data...')
+        # normalized_dev_data = NGramModel.load_dev_data(dev_dataset)  # Normalize dev data
+        
+        # print('Making predictions')
+        # pred = model.run_pred(normalized_dev_data)
+        # print('Writing predictions to {}'.format(args.test_output))
+        # assert len(pred) == len(normalized_dev_data), 'Expected {} predictions but got {}'.format(len(normalized_dev_data), len(pred))
+        # model.write_pred(pred, args.test_output)
+        
+        
+        # use with plain example/input.txt file
+        # python src/myprogram.py test --work_dir work --test_data example/input.txt --test_output pred.txt
         print('Loading model')
-        model = MyModel.load(args.work_dir)
-        print('Normalizing test data...')
-        normalized_dev_data = MyModel.load_dev_data(dev_dataset)  # Normalize dev data
+        model = NGramModel.load(args.work_dir)
+        print('Loading test data from {}'.format(args.test_data))
+        test_data = NGramModel.load_test_data(args.test_data)
         print('Making predictions')
-        pred = model.run_pred(normalized_dev_data)
+        pred = model.run_pred(test_data)
         print('Writing predictions to {}'.format(args.test_output))
-        assert len(pred) == len(normalized_dev_data), 'Expected {} predictions but got {}'.format(len(test_data), len(pred))
+        assert len(pred) == len(test_data), 'Expected {} predictions but got {}'.format(len(test_data), len(pred))
         model.write_pred(pred, args.test_output)
     else:
         raise NotImplementedError('Unknown mode {}'.format(args.mode))
