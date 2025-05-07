@@ -161,7 +161,7 @@ if __name__ == '__main__':
         print(f"{dataset_file} found. Proceeding with loading the dataset.")
     
     # Load the dataset
-    dataset = load_dataset("csv", data_files="output/mldd_dataset.csv")
+    dataset = load_dataset("csv", data_files="output/mldd_dataset.csv", encoding="utf-8")
 
     # Split the dataset into train and validation sets (90% train, 10% validation)
     train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.1).values()
