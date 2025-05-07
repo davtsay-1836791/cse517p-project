@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import random
+import string
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from datasets import load_dataset
 import re
@@ -22,123 +23,7 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
 class MyModel(nn.Module):
-    """
-    This is a starter model to get you started. Feel free to modify this file.
-    """
-
-    @classmethod
-    def load_training_data(cls, train_dataset):
-        """
-        Normalizes and loads training data, splits each conversation into individual words.
-        """
-        try:
-            train_conversations = train_dataset['conversations']
-        except Exception as e:
-            print(f"Error parsing conversations field: {e}")
-            raise
-        normalized_train_data = cls.extract_and_normalize(train_conversations)
-        return normalized_train_data
-
-    @classmethod
-    def load_dev_data(cls, dev_dataset):
-        """
-        Normalizes and loads dev data, splits each conversation into individual words.
-        """
-        try:
-            dev_conversations = dev_dataset['conversations']
-        except Exception as e:
-            print(f"Error parsing conversations field: {e}")
-            raise
-        normalized_dev_data = cls.extract_and_normalize(dev_conversations)
-        return normalized_dev_data
-
-    @classmethod
-    def write_pred(cls, preds, fname):
-        with open(fname, 'wt') as f:
-            for p in preds:
-                f.write('{}\n'.format(p))
-
-    def run_train(self, data, work_dir):
-        # your code here
-        pass
-
-    def run_pred(self, data):
-        # your code here
-        preds = []
-        all_chars = string.ascii_letters
-        for inp in data:
-            # this model just predicts a random character each time
-            top_guesses = [random.choice(all_chars) for _ in range(3)]
-            preds.append(''.join(top_guesses))
-        return preds
-
-    def save(self, work_dir):
-        """
-        Save the model's state dict to the specified directory.
-        """
-        model_path = os.path.join(work_dir, 'model.pt')
-        torch.save(self.state_dict(), model_path)
-        print(f"Model saved to {model_path}")
-
-    @classmethod
-    def load(cls, work_dir):
-        model_path = os.path.join(work_dir, 'model.pt')
-        model = cls()  # Create a fresh instance
-        model.load_state_dict(torch.load(model_path, map_location='cpu'))
-        model.eval()  # Set to evaluation mode if needed
-        print(f"Model loaded from {model_path}")
-        return model
-
-    @staticmethod
-    def normalize_value(text):
-        """
-        Normalize a given text by cleaning, tokenizing, and removing stopwords.
-        """
-        # Remove newline characters
-        text = text.strip().replace('\n', ' ')
-
-        # Normalize Unicode characters
-        text = unicodedata.normalize('NFKC', text)
-
-        # Remove non-word characters
-        text = re.sub(r'[^\w\s]', '', text, flags=re.UNICODE)
-
-        # Tokenize into words
-        words = re.findall(r'\w+', text, flags=re.UNICODE)
-
-        # Get english stopwords (TODO: more langs)
-        stop_words = set(stopwords.words('english'))
-        
-        # Remove stopwords
-        filtered = [word for word in words if word.lower() not in stop_words]
-        return filtered
-
-    @staticmethod
-    def extract_and_normalize(conversation_str_list):
-        """
-        Extract 'value' texts using regex and normalize them.
-        """
-        normalized = []
-
-        # Improved regex: handles escaped quotes inside the value
-        value_pattern = re.compile(r"'value'\s*:\s*'((?:[^'\\]|\\.)*)'", re.DOTALL)
-
-        if not isinstance(conversation_str_list, list):
-            print(f"Expected a list, but got: {type(conversation_str_list)}")
-            return normalized
-
-        for conversation_str in conversation_str_list:
-            matches = value_pattern.findall(conversation_str)
-            for text in matches:
-                # Unescape any escaped quotes
-                text = text.encode('utf-8').decode('unicode_escape')
-
-                normalized_words = MyModel.normalize_value(text)
-                normalized.append({
-                    "normalized": normalized_words
-                })
-        return normalized
-
+    pass
 
 if __name__ == '__main__':
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
@@ -159,12 +44,12 @@ if __name__ == '__main__':
         subprocess.run(['python', script_path], check=True)
     else:
         print(f"{dataset_file} found. Proceeding with loading the dataset.")
-    
+
     # Load the dataset
     dataset = load_dataset("csv", data_files="output/mldd_dataset.csv", encoding="utf-8")
 
     # Split the dataset into train and validation sets (90% train, 10% validation)
-    train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.1).values()
+    train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.95).values()
 
     # print part of the train dataset
     print("Train dataset sample:")
@@ -177,7 +62,7 @@ if __name__ == '__main__':
         model = NGramModel()
         print('Normalizing training data...')
         normalized_train_data = NGramModel.load_training_data(train_dataset)  # Corrected method call
-        
+
         print('Training')
         model.run_train(normalized_train_data, args.work_dir)  # Train with normalized train data
         print('Saving model')
@@ -185,18 +70,18 @@ if __name__ == '__main__':
     elif args.mode == 'test':
         # print('Loading model')
         # model = NGramModel.load(args.work_dir)
-        
+
         ### THE PRED STEP normalizes the data as context already
         # print('Normalizing test data...')
         # normalized_dev_data = NGramModel.load_dev_data(dev_dataset)  # Normalize dev data
-        
+
         # print('Making predictions')
         # pred = model.run_pred(normalized_dev_data)
         # print('Writing predictions to {}'.format(args.test_output))
         # assert len(pred) == len(normalized_dev_data), 'Expected {} predictions but got {}'.format(len(normalized_dev_data), len(pred))
         # model.write_pred(pred, args.test_output)
-        
-        
+
+
         # use with plain example/input.txt file
         # python src/myprogram.py test --work_dir work --test_data example/input.txt --test_output pred.txt
         print('Loading model')

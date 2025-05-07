@@ -1,7 +1,7 @@
 import os
 import random
 
-def create_dev_set(min_len=3, max_len=12, num_examples=100000,
+def create_dev_set(min_len=3, max_len=12, num_examples=10000,
                    input_file=None, input_out=None, answer_out=None):
 
     base_dir = os.path.dirname(os.path.dirname(__file__))  # go up from src/
@@ -39,4 +39,4 @@ def create_dev_set(min_len=3, max_len=12, num_examples=100000,
         f.write('\n'.join(answers))
 
 if __name__ == "__main__":
-    create_dev_set(min_len=0, max_len=50)
+    create_dev_set(min_len=1, max_len=50)
