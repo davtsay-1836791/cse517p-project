@@ -128,7 +128,8 @@ if __name__ == '__main__':
     dataset = load_dataset("csv", data_files="output/mldd_dataset.csv")
 
     # Split the dataset into train and validation sets (90% train, 10% validation)
-    train_dataset, dev_dataset = dataset["train"].train_test_split(5=0.1).values()
+    train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.1).values()
+
     # print part of the train dataset
     print("Train dataset sample:")
 

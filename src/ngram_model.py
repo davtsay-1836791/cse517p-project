@@ -146,7 +146,8 @@ class NGramModel:
                 normalized_conversation = conversation['normalized']
                 joined_conversation = ' '.join(normalized_conversation)
                 data += ' ' + joined_conversation
-                print("convo #" + str(i))
+                if i % 1000 == 0:
+                    print("convo #" + str(i))
                 i += 1
             # for i in range(3): # only 3 conversations
             #     normalized_conversation = raw_data[i]['normalized']
