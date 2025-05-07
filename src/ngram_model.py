@@ -39,14 +39,15 @@ class NGramModel:
         text = re.sub(r'[^\w\s]', '', text, flags=re.UNICODE)
 
         # Tokenize into words
-        words = re.findall(r'\w+', text, flags=re.UNICODE)
+        # words = re.findall(r'\w+', text, flags=re.UNICODE)
 
-        # Get english stopwords (TODO: more langs)
-        stop_words = set(stopwords.words('english'))
+        # # Get english stopwords (TODO: more langs)
+        # stop_words = set(stopwords.words('english'))
 
-        # Remove stopwords
-        filtered = [word for word in words if word.lower() not in stop_words]
-        return filtered
+        # # Remove stopwords
+        # filtered = [word for word in words if word.lower() not in stop_words]
+        # return filtered
+        return text
 
     @staticmethod
     def normalize_conversations(conversation_str_list):
@@ -144,8 +145,8 @@ class NGramModel:
             i = 0
             for conversation in raw_data:
                 normalized_conversation = conversation['normalized']
-                joined_conversation = ' '.join(normalized_conversation)
-                data += ' ' + joined_conversation
+                # joined_conversation = ' '.join(normalized_conversation)
+                data += ' ' + normalized_conversation
                 if i % 1000 == 0:
                     print("convo #" + str(i))
                 i += 1
