@@ -12,10 +12,6 @@ import subprocess
 import torch
 import torch.nn as nn
 
-# Ensure necessary NLTK data files are downloaded
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('wordnet')
 from ngram_model import NGramModel
 
 # Set UTF-8 encoding for standard output
@@ -35,26 +31,30 @@ if __name__ == '__main__':
 
     random.seed(0)
 
-    # Check if the mldd_dataset.csv file exists
-    dataset_file = 'output/mldd_dataset.csv'
-    if not os.path.isfile(dataset_file):
-        print(f"{dataset_file} not found. Running the necessary script to generate it.")
-        # Run the script from src/utils/combine_dataset_files.py to combine the dataset splits
-        script_path = 'src/utils/combine_dataset_files.py'
-        subprocess.run(['python', script_path], check=True)
-    else:
-        print(f"{dataset_file} found. Proceeding with loading the dataset.")
-
-    # Load the dataset
-    dataset = load_dataset("csv", data_files="output/mldd_dataset.csv", encoding="utf-8")
-
-    # Split the dataset into train and validation sets (90% train, 10% validation)
-    train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.95).values()
-
-    # print part of the train dataset
-    print("Train dataset sample:")
-
     if args.mode == 'train':
+        # Ensure necessary NLTK data files are downloaded
+        nltk.download('punkt')
+        nltk.download('stopwords')
+        nltk.download('wordnet')
+        # Check if the mldd_dataset.csv file exists
+        dataset_file = 'output/mldd_dataset.csv'
+        if not os.path.isfile(dataset_file):
+            print(f"{dataset_file} not found. Running the necessary script to generate it.")
+            # Run the script from src/utils/combine_dataset_files.py to combine the dataset splits
+            script_path = 'src/utils/combine_dataset_files.py'
+            subprocess.run(['python', script_path], check=True)
+        else:
+            print(f"{dataset_file} found. Proceeding with loading the dataset.")
+
+        # Load the dataset
+        dataset = load_dataset("csv", data_files="output/mldd_dataset.csv", encoding="utf-8")
+
+        # Split the dataset into train and validation sets (90% train, 10% validation)
+        train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.95).values()
+
+        # print part of the train dataset
+        print("Train dataset sample:")
+
         if not os.path.isdir(args.work_dir):
             print('Making working directory {}'.format(args.work_dir))
             os.makedirs(args.work_dir)
