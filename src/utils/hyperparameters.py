@@ -3,6 +3,8 @@ import itertools
 from datasets import load_dataset
 from ngram_model import NGramModel
 import pickle
+from utils.constants import INTERPOLATION_WEIGHTS
+import utils.constants as consts
 
 # Computes the character-level accuracy of predictions.
 def evaluate_accuracy(model, dev_data):
@@ -42,16 +44,25 @@ def hyperparameter_tune(dataset_file='output/mldd_dataset.csv'):
         normalized_train, normalized_dev = pickle.load(f)
 
     param_grid = {
-        "max_ngram_size": [2, 3, 4, 5, 6, 7, 8],
+        "max_ngram_size": [5],
+        "interpolation_weights": [
+            [0.2, 0.2, 0.2, 0.2, 0.2],
+            [0.05, 0.1, 0.15, 0.2, 0.5],
+            [0.1, 0.15, 0.3, 0.3, 0.15],
+            [0.03125, 0.0625, 0.125, 0.25, 0.53125],
+            [0.1, 0.15, 0.2, 0.25, 0.3]
+        ]
     }
 
     results = []
 
     print("Starting hyperparameter tuning...")
-    for max_ngram in itertools.product(
+    for max_ngram, weights in itertools.product(
         param_grid["max_ngram_size"],
+        param_grid["interpolation_weights"]
     ):
-        print(f"\nTraining with max_ngram={max_ngram}")
+        print(f"\nTraining with max_ngram={max_ngram}, weights={weights}")
+        consts.INTERPOLATION_WEIGHTS = weights
 
         model = NGramModel(max_grams=max_ngram)
         model.run_train(normalized_train, work_dir=None)

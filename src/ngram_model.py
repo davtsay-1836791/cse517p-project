@@ -11,7 +11,7 @@ from utils.normalize import normalize_v2
 
 
 #from utils.normalize import normalize
-from utils.constants import MAX_NGRAM_SIZE, MAX_UNIGRAM_FALLBACK_SIZE, MAX_TOP_K
+from utils.constants import MAX_NGRAM_SIZE, MAX_UNIGRAM_FALLBACK_SIZE, MAX_TOP_K, INTERPOLATION_WEIGHTS
 from collections import defaultdict, Counter
 import pickle
 
@@ -168,15 +168,16 @@ class NGramModel:
         
         return preds
 
-    def predict_next_chars(self, context, top_k=MAX_TOP_K):
+    def predict_next_chars(self, context, top_k=MAX_TOP_K, weights=INTERPOLATION_WEIGHTS):
         candidates = []
+        char_scores = defaultdict(float)
         seen = set()
         context = normalize_v2(context)
         if not context:
             context = '<sos>'
 
         # Iterate from the max_grams to lower ngrams if context not found n ... 3, 2, 1
-        for n in range(self.max_grams, 0, -1):
+        for n in range(1, self.max_grams + 1):
             # Returns the last (n-1) characters of the context; '' for unigram.
             ctx = context[-(n - 1):] if n > 1 else ''  # Context is a list
             # ctx = context[-(n - 1):] if n > 1 else ''
@@ -189,19 +190,19 @@ class NGramModel:
             total = sum(dist.values())
             V = len(self.vocab)
 
-            smoothness = {
-                char: (dist.get(char, 0) + 1) / (total / V)
-                for char in self.vocab
-            }
+            weight = weights[n - 1]
+            for char in self.vocab:
+                prob = (dist.get(char, 0) + 1) / (total + V)  # Add-1 smoothing
+                char_scores[char] += weight * prob
 
-            sorted_chars = sorted(smoothness.items(), key=lambda x: x[1], reverse=True)
-            for char, _ in sorted_chars:
-                if char not in seen:
-                    candidates.append(char)
-                    seen.add(char)
-                # if the condition is met.
-                if len(candidates) >= top_k:
-                    return ''.join(candidates[:top_k])
+        sorted_chars = sorted(char_scores.items(), key=lambda x: x[1], reverse=True)
+        for char, _ in sorted_chars:
+            if char not in seen:
+                candidates.append(char)
+                seen.add(char)
+            # if the condition is met.
+            if len(candidates) >= top_k:
+                return ''.join(candidates[:top_k])
 
         # Fallback to top unigrams
         # In this case we would have had lesser characters than K
