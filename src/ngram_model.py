@@ -191,9 +191,16 @@ class NGramModel:
             V = len(self.vocab)
 
             weight = weights[n - 1]
-            for char in self.vocab:
+            for char in dist:
                 prob = (dist.get(char, 0) + 1) / (total + V)  # Add-1 smoothing
                 char_scores[char] += weight * prob
+            
+            # add unseen once
+            unseen_prob = 1 / (total + V)
+            default_prob = weight * unseen_prob
+            for char in self.top_unigrams:
+                if char not in dist:
+                    char_scores[char] += default_prob
 
         sorted_chars = sorted(char_scores.items(), key=lambda x: x[1], reverse=True)
         for char, _ in sorted_chars:
