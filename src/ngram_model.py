@@ -64,9 +64,9 @@ class NGramModel:
         data = ''
         for i, conversation in enumerate(raw_normalized):
             data += ' ' + conversation['normalized']
-            if i % 1000 == 0:
-                print(f"convo #{i}")
-        print("Normalized data preview:", data[:200])
+            # if i % 1000 == 0:
+            #     print(f"convo #{i}")
+        # print("Normalized data preview:", data[:200])
         return data
 
     @classmethod
@@ -87,15 +87,16 @@ class NGramModel:
     @classmethod
     def load_test_data(cls, fname):
         data = []
-        with open(fname) as f:
+        with open(fname, encoding='utf-8') as f:
             for line in f:
                 inp = line[:-1]
+                inp = normalize_v2(inp)
                 data.append(inp)
         return data
 
     @classmethod
     def write_pred(cls, preds, fname):
-        with open(fname, 'wt') as f:
+        with open(fname, 'wt', encoding='utf-8') as f:
             for p in preds:
                 f.write('{}\n'.format(p))
 
@@ -184,7 +185,7 @@ class NGramModel:
             V = len(self.vocab)
 
             smoothness = {
-                char: (dist.get(char, 0) + 1) / (total / V)
+                char: (dist.get(char, 0) + 1) / (total + V)
                 for char in self.vocab
             }
 
