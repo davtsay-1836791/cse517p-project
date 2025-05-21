@@ -62,8 +62,11 @@ class NGramModel:
             raise
         raw_normalized = cls.normalize_conversations(train_conversations)
         data = ''
+        START_TOKEN = '<sos>'
+        END_TOKEN = '<eos>'
         for i, conversation in enumerate(raw_normalized):
-            data += ' ' + conversation['normalized']
+            sentence = conversation['normalized']
+            data += f' {START_TOKEN}{sentence}{END_TOKEN}'
             if i % 1000 == 0:
                 print(f"convo #{i}")
         print("Normalized data preview:", data[:200])
@@ -124,6 +127,7 @@ class NGramModel:
         # n = 1, 2... max_grams
 
         self.vocab = set(data)
+        self.vocab.update(['<sos>', '<eos>'])
 
         for n in range(1, self.max_grams + 1):
 
@@ -168,6 +172,8 @@ class NGramModel:
         candidates = []
         seen = set()
         context = normalize_v2(context)
+        if not context:
+            context = '<sos>'
 
         # Iterate from the max_grams to lower ngrams if context not found n ... 3, 2, 1
         for n in range(self.max_grams, 0, -1):
