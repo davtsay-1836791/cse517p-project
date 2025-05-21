@@ -13,5 +13,5 @@ def normalize(text):
     return ''.join(char for char in text if char in ALLOWED_CHARACTERS)
 
 def normalize_v2(text):
-    text = unicodedata.normalize('NFKC', text)
+    text = unicodedata.normalize('NFKC', text).lower()
     return ''.join(char for char in text if is_valid_char(char))
