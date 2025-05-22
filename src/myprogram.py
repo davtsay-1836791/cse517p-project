@@ -11,6 +11,7 @@ from nltk.corpus import stopwords
 import subprocess
 import torch
 import torch.nn as nn
+import time
 
 from ngram_model import NGramModel
 
@@ -50,7 +51,7 @@ if __name__ == '__main__':
         dataset = load_dataset("csv", data_files="output/mldd_dataset.csv", encoding="utf-8")
 
         # Split the dataset into train and validation sets (90% train, 10% validation)
-        train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.7).values()
+        train_dataset, dev_dataset = dataset["train"].train_test_split(test_size=0.9).values()
 
         # print part of the train dataset
         print("Train dataset sample:")
@@ -89,8 +90,12 @@ if __name__ == '__main__':
         print('Loading test data from {}'.format(args.test_data))
         test_data = list(NGramModel.load_test_data(args.test_data))
         print('Making predictions')
-        pred = model.run_pred(test_data)
-        print('Writing predictions to {}'.format(args.test_output))
+        
+        start_time = time.time()
+        pred = model.run_pred(test_data, verbose=False)
+        elapsed = time.time() - start_time
+        print(f'Time taken: {elapsed:.2f} seconds for {len(test_data)} samples.')
+
         assert len(pred) == len(test_data), 'Expected {} predictions but got {}'.format(len(test_data), len(pred))
         model.write_pred(pred, args.test_output)
     else:
