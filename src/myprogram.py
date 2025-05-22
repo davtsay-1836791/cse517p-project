@@ -14,6 +14,7 @@ import torch.nn as nn
 import time
 
 from ngram_model import NGramModel
+from utils.hyperparameters import hyperparameter_tune
 
 # Set UTF-8 encoding for standard output
 import sys
@@ -24,7 +25,7 @@ class MyModel(nn.Module):
 
 if __name__ == '__main__':
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument('mode', choices=('train', 'test'), help='what to run')
+    parser.add_argument('mode', choices=('train', 'test', 'tune'), help='what to run')
     parser.add_argument('--work_dir', help='where to save', default='work')
     parser.add_argument('--test_data', help='path to test data', default='example/input.txt')
     parser.add_argument('--test_output', help='path to write test predictions', default='pred.txt')
@@ -98,5 +99,8 @@ if __name__ == '__main__':
 
         assert len(pred) == len(test_data), 'Expected {} predictions but got {}'.format(len(test_data), len(pred))
         model.write_pred(pred, args.test_output)
+    elif args.mode == 'tune':
+        print("Running hyperparameter tuning for NGramModel...")
+        results = hyperparameter_tune()
     else:
         raise NotImplementedError('Unknown mode {}'.format(args.mode))
