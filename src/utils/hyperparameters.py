@@ -62,7 +62,7 @@ def hyperparameter_tune(dataset_file='output/mldd_dataset.csv'):
         param_grid["interpolation_weights"]
     ):
         print(f"\nTraining with max_ngram={max_ngram}, weights={weights}")
-        consts.INTERPOLATION_WEIGHTS = weights
+        # consts.INTERPOLATION_WEIGHTS = weights
 
         model = NGramModel(max_grams=max_ngram)
         model.run_train(normalized_train, work_dir=None)

@@ -67,7 +67,6 @@ class NGramModel:
 
     def run_train(self, data, work_dir):
         self.vocab = set(data)
-        self.vocab.update(['<sos>', '<eos>'])
 
         for n in range(1, self.max_grams + 1):
             self.models[n] = defaultdict(Counter)
@@ -95,7 +94,6 @@ class NGramModel:
 
     def predict_next_chars(self, context, top_k=MAX_TOP_K, k=0.0001):
         candidates = []
-        char_scores = defaultdict(float)
         seen = set()
         max_token_len = max(len(tok) for tok in self.SPECIAL_TOKENS)
         V = len(self.vocab)
