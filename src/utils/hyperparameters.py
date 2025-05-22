@@ -3,7 +3,7 @@ import itertools
 from datasets import load_dataset
 from ngram_model import NGramModel
 import pickle
-from utils.constants import INTERPOLATION_WEIGHTS
+# from utils.constants import INTERPOLATION_WEIGHTS
 import utils.constants as consts
 
 # Computes the character-level accuracy of predictions.
