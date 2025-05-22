@@ -1,85 +1,51 @@
 import os
 import re
-import ast
-from nltk.corpus import stopwords
-from nltk.tokenize import RegexpTokenizer
-import unicodedata
-
-from sympy.ntheory.factor_ import smoothness
-
-from utils.normalize import normalize_v2
-
-
-#from utils.normalize import normalize
-from utils.constants import MAX_NGRAM_SIZE, MAX_UNIGRAM_FALLBACK_SIZE, MAX_TOP_K, INTERPOLATION_WEIGHTS
-from collections import defaultdict, Counter
 import pickle
+import math
+from itertools import product
+from collections import defaultdict, Counter
+from utils.normalize import normalize_v2
+from utils.constants import MAX_NGRAM_SIZE, MAX_UNIGRAM_FALLBACK_SIZE, MAX_TOP_K
 
-# NOTE: this is just a raw n-gram model with frequencies.
-# It does not have smoothening, probabilities, weights (for each level) etc. It is a very basic Ngram model
 class NGramModel:
 
-    def __init__(self, max_grams = MAX_NGRAM_SIZE):
-        self.max_grams = MAX_NGRAM_SIZE
-
-        # Captures all the models (Fallbacks, n-1 ... 1)
+    def __init__(self, max_grams=MAX_NGRAM_SIZE, lambdas=None):
+        self.max_grams = max_grams
         self.models = {}
-
-        # Top unigrams will help in identifying the top if we don't find next available characters.
+        self.context_totals = {}
         self.top_unigrams = []
-
         self.vocab = set()
+        self.SPECIAL_TOKENS = {"<s>", "</s>"}
+        self.lambdas = lambdas if lambdas else [0.05, 0.10, 0.15, 0.25, 0.45]  # Recommended for 5-gram char model
 
     @staticmethod
     def normalize_conversations(conversation_str_list):
-        """
-        Extract 'value' texts using regex and normalize them.
-        """
         normalized = []
         pattern = re.compile(r"'value'\s*:\s*'(.*?)'", re.DOTALL)
-
         for row in conversation_str_list:
             matches = pattern.findall(row)
             for text in matches:
                 norm = normalize_v2(text)
                 normalized.append({"normalized": norm})
-
         return normalized
 
     @classmethod
     def load_training_data(cls, train_dataset=None):
-        """
-        Normalizes and loads training data, splits each conversation into individual words.
-        If no dataset is provided, it defaults to loading from the 'data/en.txt' file.
-        """
         if train_dataset is None:
             return []
-        
         try:
             train_conversations = train_dataset['conversations']
         except Exception as e:
             print(f"Error parsing conversations field: {e}")
             raise
         raw_normalized = cls.normalize_conversations(train_conversations)
-        data = ''
-        START_TOKEN = '<sos>'
-        END_TOKEN = '<eos>'
-        for i, conversation in enumerate(raw_normalized):
-            sentence = conversation['normalized']
-            data += f' {START_TOKEN}{sentence}{END_TOKEN}'
-            if i % 1000 == 0:
-                print(f"convo #{i}")
-        print("Normalized data preview:", data[:200])
+        data = ''.join([f"<s>{conv['normalized']}</s>" for conv in raw_normalized])
         return data
 
     @classmethod
     def load_dev_data(cls, dev_dataset=None):
-        """
-        Normalizes and loads dev data, splits each conversation into individual words.
-        """
         if dev_dataset is None:
             return []
-        
         try:
             dev_conversations = dev_dataset['conversations']
         except Exception as e:
@@ -89,156 +55,185 @@ class NGramModel:
 
     @classmethod
     def load_test_data(cls, fname):
-        data = []
-        with open(fname) as f:
+        with open(fname, encoding='utf-8') as f:
             for line in f:
-                inp = line[:-1]
-                data.append(inp)
-        return data
+                yield normalize_v2(line.strip())
 
     @classmethod
     def write_pred(cls, preds, fname):
-        with open(fname, 'wt') as f:
+        with open(fname, 'wt', encoding='utf-8') as f:
             for p in preds:
-                f.write('{}\n'.format(p))
+                f.write(f'{p}\n')
 
-    '''
-    Trains character level n-gram model from raw text.
-    Builds models for all n from 1 to max_grams. Example 1-gram, 2-gram ... nGram.
-    
-    Example if max_grams = 3 for context "hello ":
-    1 gram: context '', next_char = h
-    2 gram: context 'h', next_char = e
-    3 gram: context 'he', next_char = l
-    
-    Optimizations that can be done:
-    1. We can do a word level n-gram and do a mix and match whenever we encounter a blank space (akashkg@)
-    
-    TODO: Try moving this to its own python script for better management.
-    '''
     def run_train(self, data, work_dir):
-
-        # Basic normalization only
-        # TODO: Do de-tokenization of the data - the data set always show ' ' after ' character.
-        # DATA IS ALREADY NORMALIZED, keeping in case we need to compare training on data/en.txt
-        # data =  normalize(raw_data)
-
-        # Build the n-gram model upto max_grams - n
-        # n = 1, 2... max_grams
-
         self.vocab = set(data)
         self.vocab.update(['<sos>', '<eos>'])
 
         for n in range(1, self.max_grams + 1):
-
-            # create the NGramTable
             self.models[n] = defaultdict(Counter)
             for i in range(len(data) - n):
-
-                # Extract the context and the next character
-                '''
-                For internal & future reference:
-                
-                    n = 3, data = "hello "
-                    at i - 0, context = he, next char = l
-                    at i = 1, context = el, next char = l
-                    at i = 2, context = ll, next char = 0
-                    
-                Also, if n is 0 (unigram), we default context to '', we look at the probability of each character.
-                '''
                 context = data[i:i + n - 1] if n > 1 else ''
                 next_char = data[i + n - 1]
-
-                # Updating the count of next char following this context
                 self.models[n][context][next_char] += 1
 
-        # Identify top unigrams - ignores frequency
+            self.context_totals[n] = {
+                context: sum(counter.values())
+                for context, counter in self.models[n].items()
+            }
+
         all_chars = Counter(data)
         self.top_unigrams = [char for char, _ in all_chars.most_common(MAX_UNIGRAM_FALLBACK_SIZE)]
         print("Top unigrams: ", self.top_unigrams)
 
     def run_pred(self, data):
-        # your code here
         preds = []
-            
         for context in data:
             preds.append(self.predict_next_chars(context))
             print("Context: ", context)
             print("Predicted: ", preds[-1])
-        
         return preds
 
-    def predict_next_chars(self, context, top_k=MAX_TOP_K, weights=INTERPOLATION_WEIGHTS):
+    def predict_next_chars(self, context, top_k=MAX_TOP_K, k=0.0001):
         candidates = []
         char_scores = defaultdict(float)
         seen = set()
-        context = normalize_v2(context)
-        if not context:
-            context = '<sos>'
+        max_token_len = max(len(tok) for tok in self.SPECIAL_TOKENS)
+        V = len(self.vocab)
+        scores = defaultdict(float)
 
-        # Iterate from the max_grams to lower ngrams if context not found n ... 3, 2, 1
         for n in range(1, self.max_grams + 1):
-            # Returns the last (n-1) characters of the context; '' for unigram.
-            ctx = context[-(n - 1):] if n > 1 else ''  # Context is a list
-            # ctx = context[-(n - 1):] if n > 1 else ''
+            weight = self.lambdas[n - 1]
+            ctx = context[-(n - 1):] if n > 1 else ''
             model = self.models.get(n, {})
             dist = model.get(ctx, {})
+            total = self.context_totals[n].get(ctx, 0)
 
-            if not dist:
-                continue
+            for char in self.vocab:
+                prob = (dist.get(char, 0) + k) / (total + k * V)
+                prob = min(prob, 0.99)  # cap to prevent overconfidence
+                scores[char] += weight * prob
 
-            total = sum(dist.values())
-            V = len(self.vocab)
-
-            weight = weights[n - 1]
-            for char in dist:
-                prob = (dist.get(char, 0) + 1) / (total + V)  # Add-1 smoothing
-                char_scores[char] += weight * prob
-            
-            # add unseen once
-            unseen_prob = 1 / (total + V)
-            default_prob = weight * unseen_prob
-            for char in self.top_unigrams:
-                if char not in dist:
-                    char_scores[char] += default_prob
-
-        sorted_chars = sorted(char_scores.items(), key=lambda x: x[1], reverse=True)
+        sorted_chars = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         for char, _ in sorted_chars:
+            simulated = context + char
+            if any(simulated.endswith(token) for token in self.SPECIAL_TOKENS):
+                continue
             if char not in seen:
                 candidates.append(char)
                 seen.add(char)
-            # if the condition is met.
-            if len(candidates) >= top_k:
-                return ''.join(candidates[:top_k])
-
-        # Fallback to top unigrams
-        # In this case we would have had lesser characters than K
-        for char in self.top_unigrams:
-            if char not in seen:
-                candidates.append(char)
             if len(candidates) >= top_k:
                 break
 
+        if not candidates:
+            return ''.join(self.top_unigrams[:top_k])
+
         return ''.join(candidates[:top_k])
 
-    def save(self, work_dir):
 
+    def get_interpolated_char_probs(self, context):
+        V = len(self.vocab)
+        k = 0.001
+        scores = defaultdict(float)
+
+        active_weights = []
+        probs_by_n = []
+
+        for n in range(1, self.max_grams + 1):
+            ctx = context[-(n - 1):] if n > 1 else ''
+            model = self.models.get(n, {})
+            dist = model.get(ctx, {})
+            total = self.context_totals[n].get(ctx, 0)
+
+            if total == 0:
+                continue  # skip this n-gram if no match
+
+            level_probs = {}
+            for char in self.vocab:
+                prob = (dist.get(char, 0) + k) / (total + k * V)
+                prob = min(prob, 0.99)
+                level_probs[char] = prob
+
+            probs_by_n.append(level_probs)
+            active_weights.append(self.lambdas[n - 1])
+
+        if not active_weights or sum(active_weights) == 0:
+            return {char: 1.0 / V for char in self.vocab}
+
+        norm = sum(active_weights)
+        normed_weights = [w / norm for w in active_weights]
+
+        for weight, level_probs in zip(normed_weights, probs_by_n):
+            for char, p in level_probs.items():
+                scores[char] += weight * p
+
+        return scores
+
+
+    def perplexity(self, dev_data):
+        total_log_prob = 0
+        total_chars = 0
+
+        for sentence in dev_data:
+            context = ""
+            for i in range(len(sentence)):
+                true_char = sentence[i]
+                probs = self.get_interpolated_char_probs(context)
+                prob = max(probs.get(true_char, 1e-12), 1e-12)  # log-safe
+                total_log_prob += -math.log(prob)
+                context += true_char
+                total_chars += 1
+
+        return math.exp(total_log_prob / total_chars)
+
+    def evaluate_lambdas(self, dev_data, lambdas):
+        """
+        Evaluate the given lambda weights and return perplexity.
+        """
+        assert abs(sum(lambdas) - 1.0) < 1e-6, "Lambdas must sum to 1.0"
+        self.lambdas = lambdas
+        print("Evaluating lambdas:", lambdas)
+        perplexity = self.perplexity([d['normalized'] for d in dev_data])
+        print(f"Perplexity for lambdas {lambdas}: {perplexity:.4f}")
+        return perplexity
+
+    def tune_lambdas(self, dev_data, step=0.1):
+        best_perplexity = float('inf')
+        best_lambdas = None
+        search_space = [i * step for i in range(int(1 / step) + 1)]
+
+        for combo in product(search_space, repeat=self.max_grams):
+            if abs(sum(combo) - 1.0) > 1e-6:
+                continue
+            self.lambdas = list(combo)
+            print("Working for combo: +", str(self.lambdas))
+            perp = self.perplexity([d['normalized'] for d in dev_data])
+            print("Perplexity for combo: +", str(perp))
+            if perp < best_perplexity:
+                best_perplexity = perp
+                best_lambdas = list(combo)
+                print(f"New best perplexity: {perp:.4f} with lambdas {combo}")
+
+        self.lambdas = best_lambdas
+        return best_lambdas, best_perplexity
+
+    def save(self, work_dir):
         with open(os.path.join(work_dir, 'model.sda'), 'wb') as f:
             pickle.dump({
                 "max_n": self.max_grams,
                 "models": self.models,
+                "context_totals": self.context_totals,
                 "top_unigrams": self.top_unigrams,
-                "vocab": list(self.vocab)
+                "vocab": list(self.vocab),
+                "lambdas": self.lambdas
             }, f)
 
     @classmethod
     def load(cls, work_dir):
-        # your code here
-        # this particular model has nothing to load, but for demonstration purposes we will load a blank file
         with open(os.path.join(work_dir, 'model.sda'), 'rb') as f:
             obj = pickle.load(f)
-        model = cls(max_grams=obj['max_n'])
+        model = cls(max_grams=obj['max_n'], lambdas=obj.get('lambdas'))
         model.models = obj['models']
+        model.context_totals = obj['context_totals']
         model.top_unigrams = obj['top_unigrams']
         model.vocab = set(obj['vocab'])
         return model
