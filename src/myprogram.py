@@ -93,7 +93,7 @@ if __name__ == '__main__':
         print('Making predictions')
         
         start_time = time.time()
-        pred = model.run_pred(test_data, verbose=False)
+        pred = model.run_pred(test_data)
         elapsed = time.time() - start_time
         print(f'Time taken: {elapsed:.2f} seconds for {len(test_data)} samples.')
 
